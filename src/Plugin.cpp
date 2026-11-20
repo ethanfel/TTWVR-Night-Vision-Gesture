@@ -25,7 +25,7 @@ struct Scripts {
     void *(__cdecl *compile)(const char *);
 };
 Scripts *scripts = nullptr;
-void *menuQuery, *inventory;
+void *menuQuery, *inventory, *pipLight;
 bool inWorld = false, initialized = false, hasGoggles = false, installed = false;
 DWORD nextInventory = 0;
 BYTE *host = nullptr;
@@ -79,6 +79,16 @@ begin Function {toggle}
  endif
  SetFunctionValue kind
 end)";
+// JIP's no-argument call reads the real light state. Supplying 0 or 1 sets it.
+constexpr char pipLightScript[] = R"(begin Function {}
+ if TogglePipBoyLight
+  TogglePipBoyLight 0
+  SetFunctionValue 0
+ else
+  TogglePipBoyLight 1
+  SetFunctionValue 1
+ endif
+end)";
 int run(void *script, bool withArg = false, int arg = 0) {
     Result out;
     if (!scripts->call(script, nullptr, nullptr, &out, withArg ? 1 : 0, arg) || out.type != 1)
@@ -88,13 +98,13 @@ int run(void *script, bool withArg = false, int arg = 0) {
 
 SRWLOCK inputLock = SRWLOCK_INIT;
 Gesture gesture;
-bool eligible = false;
+unsigned eligibleHands = 0;
 unsigned pending = 0;
 DWORD pendingAt = 0;
 void reset() {
     AcquireSRWLockExclusive(&inputLock);
     gesture.interrupt();
-    eligible = false;
+    eligibleHands = 0;
     pending = 0;
     ReleaseSRWLockExclusive(&inputLock);
     nextInventory = 0;
@@ -115,12 +125,12 @@ template<int Backend> struct Input {
                     const auto &p = f->head.position;
                     const auto &l = f->hands[0].grip.position;
                     const auto &r = f->hands[1].grip.position;
-                    log("buttons=%u eligible=%d near=%d,%d head=%.2f,%.2f,%.2f left=%.2f,%.2f,%.2f right=%.2f,%.2f,%.2f",
-                        buttons,eligible,nearTemple(*f,0),nearTemple(*f,1),p.x,p.y,p.z,l.x,l.y,l.z,r.x,r.y,r.z);
+                    log("buttons=%u eligible_hands=%u near=%d,%d head=%.2f,%.2f,%.2f left=%.2f,%.2f,%.2f right=%.2f,%.2f,%.2f",
+                        buttons,eligibleHands,nearTemple(*f,0),nearTemple(*f,1),p.x,p.y,p.z,l.x,l.y,l.z,r.x,r.y,r.z);
                 }
                 last = buttons;
             }
-            const unsigned edge = gesture.filter(*f,eligible);
+            const unsigned edge = gesture.filter(*f,eligibleHands);
             if (edge) {
                 pending |= edge;
                 pendingAt = GetTickCount();
@@ -164,8 +174,9 @@ bool initialize() {
         return false;
     menuQuery = scripts->compile("begin Function {}\nSetFunctionValue (GetActiveMenuMode)\nend");
     inventory = scripts->compile(gogglesScript);
-    if (!menuQuery || !inventory) {
-        log("script compilation failed menu=%d goggles=%d",bool(menuQuery),bool(inventory));
+    pipLight = scripts->compile(pipLightScript);
+    if (!menuQuery || !inventory || !pipLight) {
+        log("script compilation failed menu=%d goggles=%d light=%d",bool(menuQuery),bool(inventory),bool(pipLight));
         return false;
     }
     const bool xr = Input<0>::install(0xaf3568), vr = Input<1>::install(0xaf36d0);
@@ -204,13 +215,17 @@ void __cdecl message(Message *m) {
         nextInventory = now + 250;
     }
     AcquireSRWLockExclusive(&inputLock);
-    eligible = playing && hasGoggles;
-    unsigned hands = eligible && now - pendingAt < 350 ? pending : 0;
+    eligibleHands = playing ? (hasGoggles ? bothHands : leftHand) : 0;
+    const unsigned hands = GetTickCount() - pendingAt < 350 ? (pending & eligibleHands) : 0;
     pending = 0;
     ReleaseSRWLockExclusive(&inputLock);
-    if (hands) {
+    if (hands & leftHand) {
+        const int state = run(pipLight);
+        log("gesture hand=left-X pip_light=%s", state == 1 ? "on" : state == 0 ? "off" : "unavailable");
+    }
+    if (hands & rightHand) {
         int result = run(inventory,true,1);
-        log("gesture hand=%s request=%s variant=%s", hands == 3 ? "both" : hands == 1 ? "left-X" : "right-A",
+        log("gesture hand=right-A request=%s variant=%s",
             result == 1 || result == 2 ? "equip" : result == -1 || result == -2 ? "remove" : "unavailable",
             (result == -2 || result == 2) ? "reinforced" : (result == -1 || result == 1) ? "standard" : "none");
         nextInventory = 0;
@@ -219,7 +234,7 @@ void __cdecl message(Message *m) {
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Query(const Nvse *n, Info *p) {
     if (!p || !n) return false;
-    *p = {1,"TTWVR Night Vision Gesture",1};
+    *p = {1,"TTWVR Night Vision Gesture",2};
     return !n->isEditor && n->runtime == 0x040020d0 && n->version >= 6;
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Load(const Nvse *n) {

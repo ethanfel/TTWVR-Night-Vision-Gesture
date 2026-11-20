@@ -13,11 +13,11 @@ int main() {
         f.hands[i].grip.position = {i ? .16f : -.16f,1.65f,-.06f};
     }
     Gesture g;
-    auto sample = [&](unsigned down,bool eligible=true) {
+    auto sample = [&](unsigned down,unsigned eligibleHands=bothHands) {
         f.buttons[0] = down&1;
         f.buttons[5] = (down>>1)&1;
         f.buttons[6] = 1;
-        unsigned fired = g.filter(f,eligible);
+        unsigned fired = g.filter(f,eligibleHands);
         assert(f.buttons[6] == 1);
         return fired;
     };
@@ -35,8 +35,17 @@ int main() {
     sample(0);
     assert(sample(3)==3 && !f.buttons[0] && !f.buttons[5]);
     sample(0);
-    assert(sample(3,false)==0 && f.buttons[0] && f.buttons[5]);
-    assert(sample(3,true)==0);
+    assert(sample(3,0)==0 && f.buttons[0] && f.buttons[5]);
+    assert(sample(3,bothHands)==0);
+    sample(0);
+    // The light remains usable without goggles. Acquiring goggles during a held A
+    // cannot capture the press that already reached the game.
+    assert(sample(3,leftHand)==leftHand && !f.buttons[0] && f.buttons[5]);
+    assert(sample(3,bothHands)==0 && !f.buttons[0] && f.buttons[5]);
+    sample(0);
+    assert(sample(rightHand,bothHands)==rightHand && !f.buttons[5]);
+    sample(0);
+    assert(sample(leftHand | rightHand,bothHands)==bothHands);
     sample(0);
     f.hands[1].grip.tracked=0;
     assert(sample(2)==0 && f.buttons[5]);

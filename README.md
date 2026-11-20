@@ -1,14 +1,19 @@
 # TTWVR Night Vision Gesture
 
-Toggle night vision by bringing your **left hand to your left temple and tapping X**, or your **right hand to your right temple and tapping A**. Tap again with either hand to switch it off.
+Bring a controller beside the temple on the same side and tap its button. Tap again to switch that effect off.
 
-Carry **Night Vision Goggles** or **Reinforced Night Vision Goggles** in your inventory. A holster slot is optional. If you carry both pairs, the gesture equips the reinforced pair and removes whichever pair you’re wearing.
+| Gesture | Effect |
+| --- | --- |
+| Left temple + **X** | Toggle the Pip-Boy light. Works with or without goggles. |
+| Right temple + **A** | Toggle night vision. Carry **Night Vision Goggles** or **Reinforced Night Vision Goggles** in your inventory. |
+
+You can use both effects at once. A holster slot is optional. If you carry both pairs of goggles, the gesture removes whichever pair you’re wearing or equips the reinforced pair if neither is worn.
 
 ## Install
 
 Requires Tale of Two Wastelands, **TTWVR 1.1.7**, xNVSE and JIP LN NVSE.
 
-1. [Download the addon ZIP](https://github.com/ethanfel/TTWVR-Night-Vision-Gesture/releases/download/v0.1/TTWVR-Night-Vision-Gesture-0.1.zip).
+1. [Download the addon ZIP](https://github.com/ethanfel/TTWVR-Night-Vision-Gesture/releases/download/v0.2/TTWVR-Night-Vision-Gesture-0.2.zip).
 2. Install and enable the ZIP in your VR mod profile, or copy its `NVSE` folder into `Fallout New Vegas/Data`.
 3. Restart the game and load your save.
 

@@ -25,6 +25,7 @@ static_assert(offsetof(Frame, hands) == 0x20 && offsetof(Frame, buttons) == 0x12
 
 // TTWVR 1.1.7 maps the first face button to X on the left and A on the right.
 constexpr int primary[2] = {0, 5};
+constexpr unsigned leftHand = 1u, rightHand = 2u, bothHands = leftHand | rightHand;
 
 inline Vec cross(Vec a, Vec b) {
     return {a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x};
@@ -52,7 +53,7 @@ class Gesture {
     unsigned captured = 0;
 public:
     // Returns the newly pressed hands. Claim their button through release even if the hand moves.
-    unsigned filter(Frame &f, bool eligible) {
+    unsigned filter(Frame &f, unsigned eligibleHands) {
         if (!f.valid) {
             down = 3;
             return 0;
@@ -69,7 +70,7 @@ public:
                     down |= bit;
                 continue;
             }
-            if (!(down & bit) && eligible && nearTemple(f,h)) {
+            if (!(down & bit) && (eligibleHands & bit) && nearTemple(f,h)) {
                 captured |= bit;
                 pressed |= bit;
             }
