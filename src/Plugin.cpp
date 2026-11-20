@@ -205,8 +205,9 @@ void __cdecl message(Message *m) {
     if (!installed) return;
     DWORD now = GetTickCount();
     const int menu = run(menuQuery);
-    // WristBoy also has its own interface and hotkey wheel outside Fallout's menu stack.
-    bool playing = (menu == 0 || menu == 1004) && !host[0x124a139] && !host[0x124a975];
+    // WristBoy remembers its display mode during gameplay. Only its open assignment
+    // wheel needs the face buttons, in addition to Fallout's own modal menus.
+    const bool playing = (menu == 0 || menu == 1004) && !host[0x124a975];
     if (playing && (nextInventory == 0 || static_cast<LONG>(now-nextInventory) >= 0)) {
         int variant = run(inventory,true,0);
         const bool owned = variant == 1 || variant == 2;
@@ -234,7 +235,7 @@ void __cdecl message(Message *m) {
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Query(const Nvse *n, Info *p) {
     if (!p || !n) return false;
-    *p = {1,"TTWVR Night Vision Gesture",2};
+    *p = {1,"TTWVR Night Vision Gesture",3};
     return !n->isEditor && n->runtime == 0x040020d0 && n->version >= 6;
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Load(const Nvse *n) {
