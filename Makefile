@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-only
 WINCXX ?= i686-w64-mingw32-g++
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Werror
 

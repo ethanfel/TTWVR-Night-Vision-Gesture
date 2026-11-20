@@ -17,3 +17,7 @@ If the gesture doesn’t respond, check `Data/NVSE/Plugins/TTWVRNightVision.log`
 ## Build
 
 Run `make` with i686 MinGW-w64 to build the DLL, and `make test` with a native C++17 compiler to run the gesture tests.
+
+## License
+
+This addon is licensed under the [GNU General Public License, version 3 only](LICENSE).

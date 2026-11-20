@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 #include "../src/Gesture.h"
 #include <cassert>
 #include <limits>
