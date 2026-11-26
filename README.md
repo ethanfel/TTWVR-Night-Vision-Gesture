@@ -11,17 +11,19 @@ Both gestures work on any WristBoy page during gameplay. You can use both effect
 
 ## Install
 
-Requires Tale of Two Wastelands, **TTWVR 1.1.7**, xNVSE and JIP LN NVSE.
+Requires Tale of Two Wastelands, **TTWVR 1.1.8** (1.1.7 is also supported), xNVSE and JIP LN NVSE.
 
-1. [Download the addon ZIP](https://github.com/ethanfel/TTWVR-Night-Vision-Gesture/releases/download/v0.2.1/TTWVR-Night-Vision-Gesture-0.2.1.zip).
+1. [Download the addon ZIP](https://github.com/ethanfel/TTWVR-Night-Vision-Gesture/releases/download/v1.1.8-r1/TTWVR-Night-Vision-Gesture-1.1.8-r1.zip).
 2. Install and enable the ZIP in your VR mod profile, or copy its `NVSE` folder into `Fallout New Vegas/Data`.
 3. Restart the game and load your save.
+
+Release names follow the TTWVR version. **1.1.8-r1** is the first addon revision for TTWVR 1.1.8.
 
 If the gesture doesn’t respond, check `Data/NVSE/Plugins/TTWVRNightVision.log` or the same path under your mod manager’s overwrite folder.
 
 ## Build
 
-Run `make` with i686 MinGW-w64 to build the DLL, and `make test` with a native C++17 compiler to run the gesture tests.
+Run `make` with i686 MinGW-w64 to build the DLL, and `make test` with a native C++17 compiler to run the gesture tests. `make package` creates the installable ZIP in `build/`.
 
 ## License
 

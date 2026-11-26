@@ -23,7 +23,7 @@ struct Frame {
 static_assert(sizeof(Pose) == 32 && sizeof(Frame) == 0x130);
 static_assert(offsetof(Frame, hands) == 0x20 && offsetof(Frame, buttons) == 0x120);
 
-// TTWVR 1.1.7 maps the first face button to X on the left and A on the right.
+// TTWVR maps the first face button to X on the left and A on the right.
 constexpr int primary[2] = {0, 5};
 constexpr unsigned leftHand = 1u, rightHand = 2u, bothHands = leftHand | rightHand;
 

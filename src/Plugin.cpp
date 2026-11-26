@@ -29,6 +29,16 @@ void *menuQuery, *inventory, *pipLight;
 bool inWorld = false, initialized = false, hasGoggles = false, installed = false;
 DWORD nextInventory = 0;
 BYTE *host = nullptr;
+struct HostLayout {
+    const char *version;
+    DWORD timestamp, imageSize;
+    unsigned xrTable, vrTable, xrFrameValidStore, vrFrameValidStore, wheelOpen;
+};
+constexpr HostLayout layouts[] = {
+    {"1.1.8", 0x6b07a53e, 0x1ffa000, 0xcf62e8, 0xcf6450, 0x8302bb, 0x80b0f4, 0x1456e05},
+    {"1.1.7", 0x6afa9b4f, 0x1d84000, 0xaf3568, 0xaf36d0, 0x6f0e9b, 0x6cbbb4, 0x124a975},
+};
+const HostLayout *layout = nullptr;
 bool traceInput = false;
 void log(const char *fmt, ...) {
     if (auto file = std::fopen("Data/NVSE/Plugins/TTWVRNightVision.log","ab")) {
@@ -166,12 +176,24 @@ bool initialize() {
     if (!host) return false;
     const auto *dos = reinterpret_cast<const IMAGE_DOS_HEADER *>(host);
     const auto *nt = reinterpret_cast<const IMAGE_NT_HEADERS32 *>(host + dos->e_lfanew);
-    // Both the author's and Linux renderer builds have this 1.1.7 input layout.
-    const unsigned char xrCheck[]{0x88,0x47,0x25,0x8d,0x4c,0x24,0x28};
-    const unsigned char vrCheck[]{0x88,0x41,0x20,0x8d,0x4c,0x24};
-    if (nt->FileHeader.TimeDateStamp != 0x6afa9b4f || nt->OptionalHeader.SizeOfImage != 0x1d84000 ||
-        std::memcmp(host+0x6e986d,xrCheck,sizeof xrCheck) || std::memcmp(host+0x6c8954,vrCheck,sizeof vrCheck))
+    // Both controller backends store Frame::valid at the same offset. Check the
+    // instructions in the host itself, since other addons can wrap the poll slots.
+    static_assert(offsetof(Frame, valid) == 0x12c);
+    constexpr unsigned char storeValid[]{0x88,0x86,0x2c,0x01,0x00,0x00};
+    for (const auto &candidate : layouts) {
+        if (nt->FileHeader.TimeDateStamp == candidate.timestamp &&
+            nt->OptionalHeader.SizeOfImage == candidate.imageSize &&
+            !std::memcmp(host + candidate.xrFrameValidStore,storeValid,sizeof storeValid) &&
+            !std::memcmp(host + candidate.vrFrameValidStore,storeValid,sizeof storeValid)) {
+            layout = &candidate;
+            break;
+        }
+    }
+    if (!layout) {
+        log("unsupported TTWVR build timestamp=%08lx size=%08lx",
+            nt->FileHeader.TimeDateStamp, nt->OptionalHeader.SizeOfImage);
         return false;
+    }
     menuQuery = scripts->compile("begin Function {}\nSetFunctionValue (GetActiveMenuMode)\nend");
     inventory = scripts->compile(gogglesScript);
     pipLight = scripts->compile(pipLightScript);
@@ -179,8 +201,8 @@ bool initialize() {
         log("script compilation failed menu=%d goggles=%d light=%d",bool(menuQuery),bool(inventory),bool(pipLight));
         return false;
     }
-    const bool xr = Input<0>::install(0xaf3568), vr = Input<1>::install(0xaf36d0);
-    log("TTWVR 1.1.7 input OpenXR=%d OpenVR=%d",xr,vr);
+    const bool xr = Input<0>::install(layout->xrTable), vr = Input<1>::install(layout->vrTable);
+    log("TTWVR %s input OpenXR=%d OpenVR=%d addon=%s",layout->version,xr,vr,NVG_VERSION);
     return xr || vr;
 }
 
@@ -200,14 +222,14 @@ void __cdecl message(Message *m) {
     if (!initialized) {
         initialized = true;
         installed = initialize();
-        if (!installed) log("inactive: supported TTWVR 1.1.7 and JIP LN required");
+        if (!installed) log("inactive: supported TTWVR and JIP LN required");
     }
     if (!installed) return;
     DWORD now = GetTickCount();
     const int menu = run(menuQuery);
     // WristBoy remembers its display mode during gameplay. Only its open assignment
     // wheel needs the face buttons, in addition to Fallout's own modal menus.
-    const bool playing = (menu == 0 || menu == 1004) && !host[0x124a975];
+    const bool playing = (menu == 0 || menu == 1004) && !host[layout->wheelOpen];
     if (playing && (nextInventory == 0 || static_cast<LONG>(now-nextInventory) >= 0)) {
         int variant = run(inventory,true,0);
         const bool owned = variant == 1 || variant == 2;
@@ -235,7 +257,7 @@ void __cdecl message(Message *m) {
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Query(const Nvse *n, Info *p) {
     if (!p || !n) return false;
-    *p = {1,"TTWVR Night Vision Gesture",3};
+    *p = {1,"TTWVR Night Vision Gesture",NVG_PLUGIN_VERSION};
     return !n->isEditor && n->runtime == 0x040020d0 && n->version >= 6;
 }
 extern "C" __declspec(dllexport) bool NVSEPlugin_Load(const Nvse *n) {
